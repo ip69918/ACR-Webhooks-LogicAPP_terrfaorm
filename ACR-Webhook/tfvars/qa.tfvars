@@ -1,0 +1,5 @@
+subscription_id      = "fa7160ab-1fbd-443c-9e28-ded8f2e36403"
+resource_group_name  = "example1-resources"
+location             = "Centarl India"
+registry_name        = "acrjail001"
+webhook_name         = "webhookjail001"
