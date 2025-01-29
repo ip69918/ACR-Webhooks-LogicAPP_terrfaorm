@@ -1,0 +1,158 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_logic_app_001_name": {
+            "defaultValue": "logic-app-001",
+            "type": "String"
+        },
+        "containerGroups___encodeURIComponent__containergroup001____externalid": {
+            "defaultValue": "/subscriptions/@{encodeURIComponent('faXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')}/resourceGroups/@{encodeURIComponent('example1-resources')}/providers/Microsoft.ContainerInstance/containerGroups/@{encodeURIComponent('containergroup001')}",
+            "type": "String"
+        },
+        "connections_aci_externalid": {
+            "defaultValue": "/subscriptions/faXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/resourceGroups/example1-resources/providers/Microsoft.Web/connections/aci",
+            "type": "String"
+        },
+        "location": {
+            "defaultValue": "centralindia",
+            "type": "String"
+        },
+        "containerGroups_containergroup001_name": {
+            "defaultValue": "containergroup001",
+            "type": "String"
+        },
+        "logicAppName": {
+            "type": "string",
+            "defaultValue": "logic-app-jail01",
+            "metadata": {
+            "description": "Name of the Logic App."
+    }
+}
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "name": "[parameters('logicAppName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "When_a_HTTP_request_is_received": {
+                            "type": "Request",
+                            "kind": "Http"
+                        }
+                    },
+                    "actions": {
+                        "Create_or_update_a_container_group": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['aci']['connectionId']"
+                                    }
+                                },
+                                "method": "put",
+                                "body": {
+                                    "location": "[parameters('location')]",
+                                    "properties": {
+                                        "containers": [
+                                            {
+                                                "name": "containerqa001",
+                                                "properties": {
+                                                    "image": "acrjail001.azurecr.io/my-app001:latest",
+                                                    "resources": {
+                                                        "requests": {
+                                                            "memoryInGB": "2",
+                                                            "cpu": "1"
+                                                        }
+                                                    },
+                                                    "volumeMounts": [
+                                                        {
+                                                            "name": "outputvolumes001",
+                                                            "mountPath": "/app/output"
+                                                        }
+                                                    ],
+                                                    "livenessProbe": {
+                                                        "exec": {
+                                                            "command": [
+                                                                "cat",
+                                                                "/tmp/healthy"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "readinessProbe": {
+                                                        "exec": {
+                                                            "command": [
+                                                                "cat",
+                                                                "/tmp/ready"
+                                                            ]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        "osType": "Linux",
+                                        "restartPolicy": "OnFailure",
+                                        "sku": "Standard",
+                                        "imageRegistryCredentials": [
+                                            {
+                                                "server": "acrjail001.azurecr.io",
+                                                "username": "acrjail001",
+                                                "password": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                                            }
+                                        ],
+                                        "volumes": [
+                                            {
+                                                "name": "outputvolumes001",
+                                                "azureFile": {
+                                                    "shareName": "output-files001",
+                                                    "storageAccountName": "storageqa001",
+                                                    "storageAccountKey": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                "path": "[parameters('containerGroups___encodeURIComponent__containergroup001____externalid')]",
+                                "queries": {
+                                    "x-ms-api-version": "2019-12-01"
+                                }
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "aci": {
+                                "id": "/subscriptions/faXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/providers/Microsoft.Web/locations/centralindia/managedApis/aci",
+                                "connectionId": "[parameters('connections_aci_externalid')]",
+                                "connectionName": "aci"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+    "logicAppWebhookUrl": {
+      "type": "string",
+      "value": "[listCallbackUrl(resourceId('Microsoft.Logic/workflows', parameters('logicAppName')), '2016-06-01').value]"
+    }
+  }
+}
